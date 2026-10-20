@@ -1,0 +1,78 @@
+@startuml Diagrama de Caso de Uso - Sistema de Estoque
+
+!theme plain
+skinparam backgroundColor #FEFEFE
+skinparam actorStyle awesome
+
+title Diagrama de Caso de Uso - Sistema de Estoque
+
+' Definicao dos Atores
+actor "Usuario" as Usuario
+actor "n8n\n(Automacao)" as N8N
+actor "Sistema" as Sistema
+
+' Definicao do Sistema
+rectangle "Sistema de Estoque" {
+
+    ' Casos de Uso - Gestao de Itens
+    usecase "Cadastrar Item" as UC1
+    usecase "Editar Item" as UC2
+    usecase "Excluir Item" as UC3
+    usecase "Listar Itens" as UC4
+    usecase "Buscar Item" as UC5
+    usecase "Visualizar Estoque Baixo" as UC6
+
+    ' Casos de Uso - Automacao
+    usecase "Enviar Comando\nem Linguagem Natural" as UC7
+    usecase "Processar Comando" as UC8
+    usecase "Cadastrar Item\nAutomaticamente" as UC9
+    usecase "Atualizar Status\ndo Comando" as UC10
+
+    ' Casos de Uso - Dashboard
+    usecase "Visualizar Dashboard" as UC11
+    usecase "Visualizar Estatisticas" as UC12
+
+    ' Casos de Uso - Historico
+    usecase "Visualizar Historico\nde Comandos" as UC13
+}
+
+' Relacionamentos do Usuario
+Usuario --> UC1
+Usuario --> UC2
+Usuario --> UC3
+Usuario --> UC4
+Usuario --> UC5
+Usuario --> UC6
+Usuario --> UC7
+Usuario --> UC11
+Usuario --> UC13
+
+' Relacionamentos do n8n
+N8N --> UC8
+N8N --> UC9
+N8N --> UC10
+
+' Relacionamentos do Sistema
+Sistema --> UC12
+
+' Relacionamentos entre casos de uso
+UC7 ..> UC8 : <<include>>
+UC8 ..> UC9 : <<include>>
+UC9 ..> UC10 : <<include>>
+UC11 ..> UC12 : <<include>>
+UC1 ..> UC4 : <<extend>>
+
+' Notas
+note right of UC7
+  O usuario digita comandos
+  em linguagem natural como:
+  "Cadastre 5 batatas e 6 macas"
+end note
+
+note right of UC8
+  O n8n recebe os comandos
+  pendentes via API e processa
+  usando IA (ex: ChatGPT)
+end note
+
+@enduml

@@ -1,0 +1,69 @@
+@startuml Diagrama de Atores - Sistema de Estoque
+
+!theme plain
+skinparam backgroundColor #FEFEFE
+skinparam actorStyle awesome
+
+title Diagrama de Atores - Sistema de Estoque
+
+' Atores Primarios
+package "Atores Primarios" {
+    actor "Usuario" as Usuario #LightBlue
+}
+
+' Atores Secundarios
+package "Atores Secundarios" {
+    actor "n8n\n(Automacao)" as N8N #LightGreen
+    actor "Sistema" as Sistema #LightYellow
+}
+
+' Descricoes
+note bottom of Usuario
+    **Usuario do Sistema**
+
+    Responsabilidades:
+    - Gerenciar itens do estoque (CRUD)
+    - Visualizar dashboard e estatisticas
+    - Enviar comandos em linguagem natural
+    - Consultar historico de operacoes
+
+    Perfil:
+    - Funcionario responsavel pelo estoque
+    - Conhecimento basico de informatica
+end note
+
+note bottom of N8N
+    **n8n - Plataforma de Automacao**
+
+    Responsabilidades:
+    - Receber comandos pendentes via API
+    - Processar linguagem natural (IA)
+    - Extrair informacoes dos comandos
+    - Executar cadastros automaticos
+    - Atualizar status dos comandos
+
+    Integracao:
+    - Webhook para receber triggers
+    - API REST para comunicacao
+    - Integracao com OpenAI/ChatGPT
+end note
+
+note bottom of Sistema
+    **Sistema (Automatico)**
+
+    Responsabilidades:
+    - Calcular estatisticas
+    - Monitorar estoque baixo
+    - Atualizar dados em tempo real
+    - Gerenciar sessoes e estado
+
+    Caracteristicas:
+    - Execucao automatica
+    - Background jobs
+end note
+
+' Hierarquia e relacionamentos
+Usuario -[hidden]right- N8N
+N8N -[hidden]right- Sistema
+
+@enduml

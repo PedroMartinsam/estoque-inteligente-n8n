@@ -1,0 +1,219 @@
+@startuml Diagrama de Classes - Frontend React
+
+!theme plain
+skinparam backgroundColor #FEFEFE
+skinparam classAttributeIconSize 0
+
+title Diagrama de Classes - Frontend React
+
+' ========================================
+' COMPONENTES
+' ========================================
+
+package "Components" #E3F2FD {
+
+    class Navbar <<Component>> {
+        - location: Location
+        --
+        + isActive(path: string): string
+        + render(): JSX
+        --
+        <i>Links de navegacao:</i>
+        - Inicio (/)
+        - Itens (/itens)
+        - Cadastrar (/cadastro)
+        - Automacao (/automacao)
+    }
+}
+
+' ========================================
+' PAGINAS
+' ========================================
+
+package "Pages" #E8F5E9 {
+
+    class Home <<Page>> {
+        - stats: object
+        - loading: boolean
+        --
+        + carregarEstatisticas(): Promise
+        + render(): JSX
+        --
+        <i>Exibe:</i>
+        - Total de itens
+        - Categorias
+        - Estoque baixo
+    }
+
+    class Itens <<Page>> {
+        - itens: Item[]
+        - loading: boolean
+        - busca: string
+        - showModal: boolean
+        - itemParaDeletar: Item
+        --
+        + carregarItens(): Promise
+        + buscarItens(): Promise
+        + confirmarDelecao(item: Item): void
+        + deletarItem(): Promise
+        + formatarData(data: string): string
+        + formatarPreco(preco: number): string
+        + render(): JSX
+    }
+
+    class CadastroItem <<Page>> {
+        - formData: ItemDTO
+        - loading: boolean
+        - isEditing: boolean
+        --
+        + carregarItem(): Promise
+        + handleChange(e: Event): void
+        + handleSubmit(e: Event): Promise
+        + render(): JSX
+        --
+        <i>Campos do formulario:</i>
+        - nome, descricao, quantidade
+        - preco, categoria, unidade
+        - quantidadeMinima
+    }
+
+    class Automacao <<Page>> {
+        - comando: string
+        - historico: ComandoAutomacao[]
+        - loading: boolean
+        - enviando: boolean
+        --
+        + carregarHistorico(): Promise
+        + enviarComando(e: Event): Promise
+        + getStatusClass(status: string): string
+        + formatarData(data: string): string
+        + render(): JSX
+    }
+}
+
+' ========================================
+' SERVICOS
+' ========================================
+
+package "Services" #FFF3E0 {
+
+    class api <<Module>> {
+        - API_URL: string
+        - axios: AxiosInstance
+        --
+        <i>Configuracao base:</i>
+        baseURL: "http://localhost:8080/api"
+        headers: "Content-Type: application/json"
+    }
+
+    class itemService <<Service>> {
+        + listarTodos(): Promise<Item[]>
+        + buscarPorId(id: number): Promise<Item>
+        + buscarPorNome(nome: string): Promise<Item[]>
+        + buscarPorCategoria(categoria: string): Promise<Item[]>
+        + listarEstoqueBaixo(): Promise<Item[]>
+        + listarCategorias(): Promise<string[]>
+        + salvar(item: ItemDTO): Promise<Item>
+        + atualizar(id: number, item: ItemDTO): Promise<Item>
+        + adicionarQuantidade(id: number, qtd: number): Promise<Item>
+        + deletar(id: number): Promise<void>
+    }
+
+    class comandoService <<Service>> {
+        + listarTodos(): Promise<ComandoAutomacao[]>
+        + listarUltimos(): Promise<ComandoAutomacao[]>
+        + buscarPorId(id: number): Promise<ComandoAutomacao>
+        + listarPendentes(): Promise<ComandoAutomacao[]>
+        + enviarComando(comando: string): Promise<ComandoAutomacao>
+        + marcarComoConcluido(id: number, resultado: string): Promise
+        + marcarComoErro(id: number, erro: string): Promise
+    }
+
+    api --> itemService : exporta
+    api --> comandoService : exporta
+}
+
+' ========================================
+' TIPOS/INTERFACES
+' ========================================
+
+package "Types" #FCE4EC {
+
+    class Item <<interface>> {
+        id: number
+        nome: string
+        descricao: string
+        quantidade: number
+        preco: number
+        categoria: string
+        unidade: string
+        quantidadeMinima: number
+        dataCadastro: string
+        dataAtualizacao: string
+    }
+
+    class ItemDTO <<interface>> {
+        nome: string
+        descricao: string
+        quantidade: number
+        preco: number
+        categoria: string
+        unidade: string
+        quantidadeMinima: number
+    }
+
+    class ComandoAutomacao <<interface>> {
+        id: number
+        comando: string
+        status: StatusComando
+        resultado: string
+        dataEnvio: string
+        dataProcessamento: string
+    }
+
+    enum StatusComando {
+        PENDENTE
+        PROCESSANDO
+        CONCLUIDO
+        ERRO
+    }
+}
+
+' ========================================
+' APP PRINCIPAL
+' ========================================
+
+class App <<Component>> {
+    --
+    + render(): JSX
+    --
+    <i>Rotas:</i>
+    / -> Home
+    /itens -> Itens
+    /cadastro -> CadastroItem
+    /editar/:id -> CadastroItem
+    /automacao -> Automacao
+}
+
+' ========================================
+' RELACIONAMENTOS
+' ========================================
+
+App --> Navbar : contem
+App --> Home : rota
+App --> Itens : rota
+App --> CadastroItem : rota
+App --> Automacao : rota
+
+Home --> itemService : usa
+Itens --> itemService : usa
+CadastroItem --> itemService : usa
+Automacao --> comandoService : usa
+
+itemService --> Item : retorna
+itemService --> ItemDTO : recebe
+comandoService --> ComandoAutomacao : retorna
+
+ComandoAutomacao --> StatusComando : usa
+
+@enduml

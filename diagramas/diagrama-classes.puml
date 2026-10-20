@@ -1,0 +1,268 @@
+@startuml Diagrama de Classes - Sistema de Estoque
+
+!theme plain
+skinparam backgroundColor #FEFEFE
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+
+title Diagrama de Classes - Sistema de Estoque
+
+' ========================================
+' CAMADA MODEL (Entidades)
+' ========================================
+
+package "Model (Entidades)" #E8F5E9 {
+
+    class Item {
+        - id: Long
+        - nome: String
+        - descricao: String
+        - quantidade: Integer
+        - preco: BigDecimal
+        - categoria: String
+        - unidade: String
+        - quantidadeMinima: Integer
+        - dataCadastro: LocalDateTime
+        - dataAtualizacao: LocalDateTime
+        --
+        + getId(): Long
+        + setId(id: Long): void
+        + getNome(): String
+        + setNome(nome: String): void
+        + getDescricao(): String
+        + setDescricao(descricao: String): void
+        + getQuantidade(): Integer
+        + setQuantidade(quantidade: Integer): void
+        + getPreco(): BigDecimal
+        + setPreco(preco: BigDecimal): void
+        + getCategoria(): String
+        + setCategoria(categoria: String): void
+        + getUnidade(): String
+        + setUnidade(unidade: String): void
+        + getQuantidadeMinima(): Integer
+        + setQuantidadeMinima(qtd: Integer): void
+        + getDataCadastro(): LocalDateTime
+        + getDataAtualizacao(): LocalDateTime
+        --
+        # onCreate(): void
+        # onUpdate(): void
+    }
+
+    class ComandoAutomacao {
+        - id: Long
+        - comando: String
+        - status: StatusComando
+        - resultado: String
+        - dataEnvio: LocalDateTime
+        - dataProcessamento: LocalDateTime
+        --
+        + getId(): Long
+        + setId(id: Long): void
+        + getComando(): String
+        + setComando(comando: String): void
+        + getStatus(): StatusComando
+        + setStatus(status: StatusComando): void
+        + getResultado(): String
+        + setResultado(resultado: String): void
+        + getDataEnvio(): LocalDateTime
+        + getDataProcessamento(): LocalDateTime
+        --
+        # onCreate(): void
+    }
+
+    enum StatusComando {
+        PENDENTE
+        PROCESSANDO
+        CONCLUIDO
+        ERRO
+    }
+
+    ComandoAutomacao --> StatusComando : usa
+}
+
+' ========================================
+' CAMADA DTO
+' ========================================
+
+package "DTO (Data Transfer Objects)" #E3F2FD {
+
+    class ItemDTO {
+        - id: Long
+        - nome: String
+        - descricao: String
+        - quantidade: Integer
+        - preco: BigDecimal
+        - categoria: String
+        - unidade: String
+        - quantidadeMinima: Integer
+        --
+        + ItemDTO()
+        + ItemDTO(id, nome, descricao, ...)
+        + getId(): Long
+        + setId(id: Long): void
+        + getNome(): String
+        + setNome(nome: String): void
+        + getQuantidade(): Integer
+        + setQuantidade(quantidade: Integer): void
+        ... getters/setters
+    }
+
+    class ComandoDTO {
+        - comando: String
+        --
+        + ComandoDTO()
+        + ComandoDTO(comando: String)
+        + getComando(): String
+        + setComando(comando: String): void
+    }
+}
+
+' ========================================
+' CAMADA REPOSITORY
+' ========================================
+
+package "Repository (Acesso a Dados)" #FFF3E0 {
+
+    interface ItemRepository <<interface>> {
+        + findByNomeIgnoreCase(nome: String): Optional<Item>
+        + findByNomeContainingIgnoreCase(nome: String): List<Item>
+        + findByCategoriaIgnoreCase(categoria: String): List<Item>
+        + findItensEstoqueBaixo(): List<Item>
+        + findAllCategorias(): List<String>
+        + existsByNomeIgnoreCase(nome: String): boolean
+    }
+
+    interface ComandoAutomacaoRepository <<interface>> {
+        + findByStatus(status: StatusComando): List<ComandoAutomacao>
+        + findAllByOrderByDataEnvioDesc(): List<ComandoAutomacao>
+        + findTop10ByOrderByDataEnvioDesc(): List<ComandoAutomacao>
+    }
+
+    interface JpaRepository<T, ID> <<interface>> {
+        + findAll(): List<T>
+        + findById(id: ID): Optional<T>
+        + save(entity: T): T
+        + deleteById(id: ID): void
+        + existsById(id: ID): boolean
+    }
+
+    ItemRepository --|> JpaRepository
+    ComandoAutomacaoRepository --|> JpaRepository
+}
+
+' ========================================
+' CAMADA SERVICE
+' ========================================
+
+package "Service (Logica de Negocio)" #FCE4EC {
+
+    class ItemService {
+        - itemRepository: ItemRepository
+        --
+        + listarTodos(): List<Item>
+        + buscarPorId(id: Long): Optional<Item>
+        + buscarPorNome(nome: String): Optional<Item>
+        + buscarPorNomeContendo(nome: String): List<Item>
+        + buscarPorCategoria(categoria: String): List<Item>
+        + listarItensEstoqueBaixo(): List<Item>
+        + listarCategorias(): List<String>
+        + salvar(itemDTO: ItemDTO): Item
+        + atualizar(id: Long, itemDTO: ItemDTO): Item
+        + atualizarQuantidade(id: Long, qtd: Integer): Item
+        + adicionarQuantidade(id: Long, qtd: Integer): Item
+        + adicionarQuantidadePorNome(nome: String, qtd: Integer): Item
+        + deletar(id: Long): void
+    }
+
+    class ComandoAutomacaoService {
+        - comandoRepository: ComandoAutomacaoRepository
+        --
+        + listarTodos(): List<ComandoAutomacao>
+        + listarUltimos(): List<ComandoAutomacao>
+        + buscarPorId(id: Long): Optional<ComandoAutomacao>
+        + listarPendentes(): List<ComandoAutomacao>
+        + enviarComando(comandoDTO: ComandoDTO): ComandoAutomacao
+        + atualizarStatus(id: Long, status: StatusComando, resultado: String): ComandoAutomacao
+        + marcarComoConcluido(id: Long, resultado: String): ComandoAutomacao
+        + marcarComoErro(id: Long, erro: String): ComandoAutomacao
+    }
+
+    ItemService --> ItemRepository : usa
+    ComandoAutomacaoService --> ComandoAutomacaoRepository : usa
+}
+
+' ========================================
+' CAMADA CONTROLLER
+' ========================================
+
+package "Controller (API REST)" #F3E5F5 {
+
+    class ItemController {
+        - itemService: ItemService
+        --
+        + listarTodos(): ResponseEntity<List<Item>>
+        + buscarPorId(id: Long): ResponseEntity<Item>
+        + buscarPorNome(nome: String): ResponseEntity<Item>
+        + buscarPorNomeContendo(nome: String): ResponseEntity<List<Item>>
+        + buscarPorCategoria(categoria: String): ResponseEntity<List<Item>>
+        + listarItensEstoqueBaixo(): ResponseEntity<List<Item>>
+        + listarCategorias(): ResponseEntity<List<String>>
+        + salvar(itemDTO: ItemDTO): ResponseEntity<Item>
+        + atualizar(id: Long, itemDTO: ItemDTO): ResponseEntity<Item>
+        + atualizarQuantidade(id: Long, qtd: Integer): ResponseEntity<Item>
+        + adicionarQuantidade(id: Long, qtd: Integer): ResponseEntity<Item>
+        + adicionarQuantidadePorNome(nome: String, qtd: Integer): ResponseEntity<Item>
+        + deletar(id: Long): ResponseEntity<Void>
+    }
+
+    class ComandoAutomacaoController {
+        - comandoService: ComandoAutomacaoService
+        --
+        + listarTodos(): ResponseEntity<List<ComandoAutomacao>>
+        + listarUltimos(): ResponseEntity<List<ComandoAutomacao>>
+        + buscarPorId(id: Long): ResponseEntity<ComandoAutomacao>
+        + listarPendentes(): ResponseEntity<List<ComandoAutomacao>>
+        + enviarComando(comandoDTO: ComandoDTO): ResponseEntity<ComandoAutomacao>
+        + atualizarStatus(id: Long, body: Map): ResponseEntity<ComandoAutomacao>
+        + marcarComoConcluido(id: Long, body: Map): ResponseEntity<ComandoAutomacao>
+        + marcarComoErro(id: Long, body: Map): ResponseEntity<ComandoAutomacao>
+    }
+
+    ItemController --> ItemService : usa
+    ComandoAutomacaoController --> ComandoAutomacaoService : usa
+}
+
+' ========================================
+' CAMADA CONFIG
+' ========================================
+
+package "Config (Configuracoes)" #EFEBE9 {
+
+    class CorsConfig {
+        + corsFilter(): CorsFilter
+    }
+
+    class GlobalExceptionHandler {
+        + handleEntityNotFound(ex: EntityNotFoundException): ResponseEntity
+        + handleValidationErrors(ex: MethodArgumentNotValidException): ResponseEntity
+        + handleGenericException(ex: Exception): ResponseEntity
+    }
+}
+
+' ========================================
+' RELACIONAMENTOS ENTRE CAMADAS
+' ========================================
+
+ItemController ..> ItemDTO : recebe
+ComandoAutomacaoController ..> ComandoDTO : recebe
+
+ItemService ..> Item : manipula
+ItemService ..> ItemDTO : recebe
+
+ComandoAutomacaoService ..> ComandoAutomacao : manipula
+ComandoAutomacaoService ..> ComandoDTO : recebe
+
+ItemRepository ..> Item : persiste
+ComandoAutomacaoRepository ..> ComandoAutomacao : persiste
+
+@enduml

@@ -1,0 +1,202 @@
+@startuml Diagrama de Classes Simplificado
+
+!theme plain
+skinparam backgroundColor #FEFEFE
+skinparam packageStyle rectangle
+
+title Diagrama de Classes Simplificado - Arquitetura em Camadas
+
+' ========================================
+' CAMADA DE APRESENTACAO (Frontend React)
+' ========================================
+
+package "Frontend (React)" #E1F5FE {
+
+    class "Navbar" as Navbar <<Component>> {
+        Navegacao do sistema
+    }
+
+    class "Home" as Home <<Page>> {
+        Dashboard com estatisticas
+    }
+
+    class "Itens" as Itens <<Page>> {
+        Listagem de itens
+    }
+
+    class "CadastroItem" as CadastroItem <<Page>> {
+        Formulario de cadastro/edicao
+    }
+
+    class "Automacao" as Automacao <<Page>> {
+        Comandos em linguagem natural
+    }
+
+    class "api.js" as ApiService <<Service>> {
+        + itemService
+        + comandoService
+    }
+}
+
+' ========================================
+' CAMADA DE CONTROLE (Backend)
+' ========================================
+
+package "Controller Layer" #F3E5F5 {
+
+    class ItemController <<RestController>> {
+        @RequestMapping("/api/itens")
+        --
+        GET /
+        GET /{id}
+        GET /buscar
+        POST /
+        PUT /{id}
+        DELETE /{id}
+        POST /adicionar-por-nome
+    }
+
+    class ComandoController <<RestController>> {
+        @RequestMapping("/api/comandos")
+        --
+        GET /
+        GET /pendentes
+        POST /
+        PATCH /{id}/concluido
+        PATCH /{id}/erro
+    }
+}
+
+' ========================================
+' CAMADA DE SERVICO (Backend)
+' ========================================
+
+package "Service Layer" #FCE4EC {
+
+    class ItemService <<Service>> {
+        + listarTodos()
+        + buscarPorId()
+        + salvar()
+        + atualizar()
+        + deletar()
+        + adicionarQuantidadePorNome()
+    }
+
+    class ComandoService <<Service>> {
+        + listarPendentes()
+        + enviarComando()
+        + marcarComoConcluido()
+        + marcarComoErro()
+    }
+}
+
+' ========================================
+' CAMADA DE PERSISTENCIA (Backend)
+' ========================================
+
+package "Repository Layer" #FFF3E0 {
+
+    interface ItemRepository <<JpaRepository>> {
+        + findByNomeIgnoreCase()
+        + findItensEstoqueBaixo()
+        + findAllCategorias()
+    }
+
+    interface ComandoRepository <<JpaRepository>> {
+        + findByStatus()
+        + findTop10ByOrderByDataEnvioDesc()
+    }
+}
+
+' ========================================
+' CAMADA DE MODELO (Backend)
+' ========================================
+
+package "Model Layer" #E8F5E9 {
+
+    class Item <<Entity>> {
+        id: Long
+        nome: String
+        quantidade: Integer
+        categoria: String
+        preco: BigDecimal
+    }
+
+    class ComandoAutomacao <<Entity>> {
+        id: Long
+        comando: String
+        status: StatusComando
+        resultado: String
+    }
+
+    enum StatusComando {
+        PENDENTE
+        PROCESSANDO
+        CONCLUIDO
+        ERRO
+    }
+}
+
+' ========================================
+' SISTEMA EXTERNO
+' ========================================
+
+package "Sistema Externo" #FFEBEE {
+
+    class "n8n" as N8N <<External>> {
+        Workflow de automacao
+        --
+        1. Busca comandos pendentes
+        2. Processa com IA
+        3. Cadastra itens
+        4. Atualiza status
+    }
+
+    class "OpenAI" as OpenAI <<External>> {
+        Processamento de
+        linguagem natural
+    }
+}
+
+' ========================================
+' BANCO DE DADOS
+' ========================================
+
+database "H2 Database" as DB {
+    itens
+    comandos_automacao
+}
+
+' ========================================
+' RELACIONAMENTOS
+' ========================================
+
+' Frontend -> Backend
+ApiService --> ItemController : HTTP
+ApiService --> ComandoController : HTTP
+
+' Controller -> Service
+ItemController --> ItemService
+ComandoController --> ComandoService
+
+' Service -> Repository
+ItemService --> ItemRepository
+ComandoService --> ComandoRepository
+
+' Repository -> Model
+ItemRepository --> Item
+ComandoRepository --> ComandoAutomacao
+
+' Model -> Database
+Item --> DB
+ComandoAutomacao --> DB
+
+' External
+N8N --> ComandoController : HTTP
+N8N --> ItemController : HTTP
+N8N --> OpenAI : API
+
+' Entity relationship
+ComandoAutomacao --> StatusComando
+
+@enduml

@@ -1,0 +1,13 @@
+C:\Users\Victor\Desktop\TCC\backend\src\main\java\com\estoque\sistema\dto\ItemDTO.java
+C:\Users\Victor\Desktop\TCC\backend\src\main\java\com\estoque\sistema\repository\ItemRepository.java
+C:\Users\Victor\Desktop\TCC\backend\src\main\java\com\estoque\sistema\controller\ItemController.java
+C:\Users\Victor\Desktop\TCC\backend\src\main\java\com\estoque\sistema\config\CorsConfig.java
+C:\Users\Victor\Desktop\TCC\backend\src\main\java\com\estoque\sistema\dto\ComandoDTO.java
+C:\Users\Victor\Desktop\TCC\backend\src\main\java\com\estoque\sistema\service\ComandoAutomacaoService.java
+C:\Users\Victor\Desktop\TCC\backend\src\main\java\com\estoque\sistema\controller\ComandoAutomacaoController.java
+C:\Users\Victor\Desktop\TCC\backend\src\main\java\com\estoque\sistema\service\ItemService.java
+C:\Users\Victor\Desktop\TCC\backend\src\main\java\com\estoque\sistema\config\GlobalExceptionHandler.java
+C:\Users\Victor\Desktop\TCC\backend\src\main\java\com\estoque\sistema\model\Item.java
+C:\Users\Victor\Desktop\TCC\backend\src\main\java\com\estoque\sistema\repository\ComandoAutomacaoRepository.java
+C:\Users\Victor\Desktop\TCC\backend\src\main\java\com\estoque\sistema\model\ComandoAutomacao.java
+C:\Users\Victor\Desktop\TCC\backend\src\main\java\com\estoque\sistema\SistemaEstoqueApplication.java

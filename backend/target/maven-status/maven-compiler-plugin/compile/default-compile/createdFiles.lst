@@ -1,0 +1,14 @@
+com\estoque\sistema\service\ComandoAutomacaoService.class
+com\estoque\sistema\repository\ComandoAutomacaoRepository.class
+com\estoque\sistema\dto\ItemDTO.class
+com\estoque\sistema\SistemaEstoqueApplication.class
+com\estoque\sistema\dto\ComandoDTO.class
+com\estoque\sistema\model\ComandoAutomacao$StatusComando.class
+com\estoque\sistema\model\ComandoAutomacao.class
+com\estoque\sistema\config\GlobalExceptionHandler.class
+com\estoque\sistema\controller\ItemController.class
+com\estoque\sistema\service\ItemService.class
+com\estoque\sistema\config\CorsConfig.class
+com\estoque\sistema\controller\ComandoAutomacaoController.class
+com\estoque\sistema\model\Item.class
+com\estoque\sistema\repository\ItemRepository.class

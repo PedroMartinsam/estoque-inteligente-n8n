@@ -1,0 +1,86 @@
+@startuml Diagrama de Classes - Entidades do Dominio
+
+!theme plain
+skinparam backgroundColor #FEFEFE
+skinparam classAttributeIconSize 0
+
+title Diagrama de Classes - Entidades do Dominio
+
+class Item <<Entity>> {
+    - id: Long <<PK>>
+    - nome: String <<not null>>
+    - descricao: String
+    - quantidade: Integer <<not null>>
+    - preco: BigDecimal
+    - categoria: String
+    - unidade: String
+    - quantidadeMinima: Integer
+    - dataCadastro: LocalDateTime
+    - dataAtualizacao: LocalDateTime
+    ==
+    <i>Anotacoes JPA:</i>
+    @Entity
+    @Table(name = "itens")
+    ==
+    + onCreate(): void
+    + onUpdate(): void
+}
+
+class ComandoAutomacao <<Entity>> {
+    - id: Long <<PK>>
+    - comando: String <<not null>>
+    - status: StatusComando <<not null>>
+    - resultado: String
+    - dataEnvio: LocalDateTime
+    - dataProcessamento: LocalDateTime
+    ==
+    <i>Anotacoes JPA:</i>
+    @Entity
+    @Table(name = "comandos_automacao")
+    ==
+    + onCreate(): void
+}
+
+enum StatusComando <<Enumeration>> {
+    PENDENTE
+    PROCESSANDO
+    CONCLUIDO
+    ERRO
+}
+
+ComandoAutomacao --> "1" StatusComando : status
+
+note right of Item
+    <b>Tabela: itens</b>
+
+    Armazena os produtos
+    do estoque com suas
+    quantidades e precos.
+
+    <b>Validacoes:</b>
+    - nome: obrigatorio
+    - quantidade >= 0
+end note
+
+note right of ComandoAutomacao
+    <b>Tabela: comandos_automacao</b>
+
+    Armazena comandos em
+    linguagem natural para
+    processamento pelo n8n.
+
+    <b>Fluxo de Status:</b>
+    PENDENTE -> PROCESSANDO
+    PROCESSANDO -> CONCLUIDO | ERRO
+end note
+
+note bottom of StatusComando
+    <b>Estados do Comando:</b>
+
+    PENDENTE: Aguardando n8n
+    PROCESSANDO: Em execucao
+    CONCLUIDO: Sucesso
+    ERRO: Falha
+end note
+
+@enduml
