@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { FaBoxes, FaEdit, FaEyeSlash, FaPlus, FaSearch, FaTimes } from 'react-icons/fa'
+import { FaBoxes, FaEdit, FaEyeSlash, FaPlus, FaSearch, FaTimes, FaUndo } from 'react-icons/fa'
 import { toast } from 'react-toastify'
 import { itemService } from '../services/api'
 import {
@@ -45,6 +45,8 @@ function valorOrdenacao(item, chave) {
 
 function Itens() {
   const [itens, setItens] = useState([])
+  const [inativos, setInativos] = useState([])
+  const [reativandoId, setReativandoId] = useState(null)
   const [loading, setLoading] = useState(true)
   const [busca, setBusca] = useState('')
   const [situacao, setSituacao] = useState('todos')
@@ -59,8 +61,12 @@ function Itens() {
 
   const carregarItens = async () => {
     try {
-      const response = await itemService.listarTodos()
-      setItens(response.data)
+      const [ativosRes, inativosRes] = await Promise.all([
+        itemService.listarTodos(),
+        itemService.listarInativos().catch(() => ({ data: [] }))
+      ])
+      setItens(ativosRes.data)
+      setInativos(inativosRes.data)
     } catch (error) {
       toast.error('Erro ao carregar itens')
       console.error(error)
@@ -85,25 +91,43 @@ function Itens() {
     }
   }
 
+  const reativarItem = async (item) => {
+    try {
+      setReativandoId(item.id)
+      await itemService.reativar(item.id)
+      toast.success(`"${item.nome}" voltou para o estoque`)
+      await carregarItens()
+    } catch (error) {
+      toast.error(error.response?.data?.erro || error.response?.data?.message || 'Erro ao reativar item')
+      console.error(error)
+    } finally {
+      setReativandoId(null)
+    }
+  }
+
+  const verInativos = situacao === 'inativos'
+  // na aba Inativados a lista e outra; os demais filtros continuam valendo
+  const base = verInativos ? inativos : itens
+
   // categorias existentes (sem repetir por maiusculas/minusculas)
   const categorias = useMemo(() => {
     const mapa = new Map()
-    for (const i of itens) {
+    for (const i of base) {
       if (i.categoria) mapa.set(i.categoria.trim().toLowerCase(), capitalizar(i.categoria.trim()))
     }
     return [...mapa.entries()].sort((a, b) => a[1].localeCompare(b[1], 'pt-BR'))
-  }, [itens])
+  }, [base])
 
   const contagem = useMemo(() => {
-    const c = { todos: itens.length, ok: 0, baixo: 0, zerado: 0 }
+    const c = { todos: itens.length, ok: 0, baixo: 0, zerado: 0, inativos: inativos.length }
     for (const i of itens) c[situacaoEstoque(i)] += 1
     return c
-  }, [itens])
+  }, [itens, inativos])
 
   const visiveis = useMemo(() => {
     const termo = busca.trim().toLowerCase()
-    const lista = itens.filter((i) => {
-      if (situacao !== 'todos' && situacaoEstoque(i) !== situacao) return false
+    const lista = base.filter((i) => {
+      if (!verInativos && situacao !== 'todos' && situacaoEstoque(i) !== situacao) return false
       if (categoria && (i.categoria || '').trim().toLowerCase() !== categoria) return false
       if (termo) {
         const alvo = `${i.nome || ''} ${i.categoria || ''} ${i.id}`.toLowerCase()
@@ -117,7 +141,7 @@ function Itens() {
       const cmp = typeof va === 'string' ? va.localeCompare(vb, 'pt-BR') : va - vb
       return ordem.asc ? cmp : -cmp
     })
-  }, [itens, busca, situacao, categoria, ordem])
+  }, [base, verInativos, busca, situacao, categoria, ordem])
 
   const valorVisivel = visiveis.reduce(
     (s, i) => s + (i.preco != null ? (i.quantidade || 0) * Number(i.preco) : 0),
@@ -151,7 +175,8 @@ function Itens() {
           <span className="ep-eyebrow">Estoque</span>
           <h1 className="ep-title">Produtos</h1>
           <p className="ep-subtitle">
-            {numero.format(itens.length)} produtos ativos · clique no título de uma coluna para ordenar.
+            {numero.format(itens.length)} produtos ativos
+            {inativos.length > 0 && ` · ${numero.format(inativos.length)} inativados`} · clique no título de uma coluna para ordenar.
           </p>
         </div>
         <div className="ep-actions">
@@ -168,13 +193,19 @@ function Itens() {
               ['todos', 'Todos'],
               ['ok', 'Em dia'],
               ['baixo', 'Baixo'],
-              ['zerado', 'Zerado']
+              ['zerado', 'Zerado'],
+              ['inativos', 'Inativados']
             ].map(([chave, rotulo]) => (
               <button
                 key={chave}
                 type="button"
                 className={`ep-chip ${situacao === chave ? 'ativo' : ''}`}
-                onClick={() => setSituacao(chave)}
+                style={chave === 'inativos' ? { marginLeft: 6, borderStyle: 'dashed' } : undefined}
+                title={chave === 'inativos' ? 'Produtos excluídos (inativados), que podem ser reativados' : undefined}
+                onClick={() => {
+                  setSituacao(chave)
+                  setCategoria('')
+                }}
                 aria-pressed={situacao === chave}
               >
                 {rotulo} <span>{contagem[chave]}</span>
@@ -222,8 +253,18 @@ function Itens() {
             <span className="ep-empty-icon">
               <FaBoxes />
             </span>
-            {itens.length === 0 ? 'Nenhum produto cadastrado ainda.' : 'Nenhum produto encontrado com esses filtros.'}
-            {itens.length === 0 ? (
+            {verInativos
+              ? base.length === 0
+                ? 'Nenhum produto inativado.'
+                : 'Nenhum produto inativado com esses filtros.'
+              : itens.length === 0
+                ? 'Nenhum produto cadastrado ainda.'
+                : 'Nenhum produto encontrado com esses filtros.'}
+            {verInativos && base.length === 0 ? (
+              <button type="button" className="ep-btn" onClick={limparFiltros}>
+                Voltar para todos
+              </button>
+            ) : itens.length === 0 && !verInativos ? (
               <Link to="/cadastro" className="ep-btn ep-btn-primary">
                 <FaPlus /> Cadastrar primeiro item
               </Link>
@@ -259,7 +300,7 @@ function Itens() {
                   const sit = situacaoEstoque(item)
                   const valor = item.preco != null ? (item.quantidade || 0) * Number(item.preco) : null
                   return (
-                    <tr key={item.id}>
+                    <tr key={item.id} style={verInativos ? { opacity: 0.72 } : undefined}>
                       <td>
                         <div className="ep-produto">
                           <span className="ep-avatar">{item.nome?.charAt(0)}</span>
@@ -285,7 +326,13 @@ function Itens() {
                         </div>
                       </td>
                       <td>
-                        <span className={`ep-badge ${sit}`}>{ROTULO_SITUACAO[sit]}</span>
+                        {verInativos ? (
+                          <span className="ep-badge" style={{ background: 'var(--ep-line)', color: 'var(--ep-muted)' }}>
+                            Inativo
+                          </span>
+                        ) : (
+                          <span className={`ep-badge ${sit}`}>{ROTULO_SITUACAO[sit]}</span>
+                        )}
                       </td>
                       <td className="num">{item.preco != null ? moeda.format(item.preco) : <span className="ep-hint">sem preço</span>}</td>
                       <td className="num" style={{ fontWeight: 700 }}>
@@ -296,18 +343,40 @@ function Itens() {
                       </td>
                       <td>
                         <div className="ep-row-actions">
+                          {verInativos ? (
+                            <button
+                              type="button"
+                              className="ep-btn"
+                              style={{ padding: '6px 12px', fontSize: '0.82rem' }}
+                              title="Reativar"
+                              aria-label={`Reativar ${item.nome}`}
+                              onClick={() => reativarItem(item)}
+                              disabled={reativandoId === item.id}
+                            >
+                              <FaUndo /> {reativandoId === item.id ? 'Reativando...' : 'Reativar'}
+                            </button>
+                          ) : (
+                          <>
                           <Link to={`/editar/${item.id}`} className="ep-icon-btn" title="Editar" aria-label={`Editar ${item.nome}`}>
                             <FaEdit />
                           </Link>
                           <button
                             type="button"
                             className="ep-icon-btn danger"
-                            title="Inativar"
+                            title={
+                              (item.quantidade || 0) > 0
+                                ? `Só é possível inativar com o estoque zerado (saldo atual: ${item.quantidade})`
+                                : 'Inativar'
+                            }
                             aria-label={`Inativar ${item.nome}`}
                             onClick={() => setItemParaInativar(item)}
+                            disabled={(item.quantidade || 0) > 0}
+                            style={(item.quantidade || 0) > 0 ? { opacity: 0.35, cursor: 'not-allowed' } : undefined}
                           >
                             <FaEyeSlash />
                           </button>
+                          </>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -324,7 +393,8 @@ function Itens() {
             style={{ borderTop: '1px solid var(--ep-line)', padding: '14px 22px', fontSize: '0.84rem', color: 'var(--ep-muted)' }}
           >
             <span>
-              Mostrando <strong style={{ color: 'var(--ep-ink)' }}>{visiveis.length}</strong> de {itens.length} produtos
+              Mostrando <strong style={{ color: 'var(--ep-ink)' }}>{visiveis.length}</strong> de {base.length}{' '}
+              {verInativos ? 'produtos inativados' : 'produtos'}
             </span>
             <span>
               Valor total: <strong style={{ color: 'var(--ep-ink)' }}>{moeda.format(valorVisivel)}</strong>
@@ -341,8 +411,8 @@ function Itens() {
             </span>
             <h3>Inativar “{itemParaInativar.nome}”?</h3>
             <p>
-              O produto sai das listagens e das buscas, mas o histórico continua guardado no banco. Se ele voltar a ser
-              vendido, basta cadastrá-lo de novo com o mesmo nome que ele é reativado.
+              O estoque está zerado, então o produto pode ser inativado. Ele sai das listagens e das buscas, mas o
+              histórico continua guardado no banco e ele pode ser reativado na aba Inativados.
             </p>
             <div className="ep-modal-footer">
               <button type="button" className="ep-btn" onClick={() => setItemParaInativar(null)} disabled={inativando}>

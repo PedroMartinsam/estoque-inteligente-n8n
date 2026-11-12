@@ -55,6 +55,33 @@ function obterSessao() {
   return id
 }
 
+const CHAVE_RASCUNHO = 'chat-estoque-rascunho'
+
+function lerRascunho() {
+  try {
+    return localStorage.getItem(CHAVE_RASCUNHO) || ''
+  } catch {
+    return ''
+  }
+}
+
+function salvarRascunho(valor) {
+  try {
+    if (valor) localStorage.setItem(CHAVE_RASCUNHO, valor)
+    else localStorage.removeItem(CHAVE_RASCUNHO)
+  } catch {
+    /* sem localStorage: o rascunho vale so enquanto a pagina esta aberta */
+  }
+}
+
+// foca o campo e coloca o cursor no fim do texto (util quando volta com rascunho)
+function focarCampo(el) {
+  if (!el) return
+  el.focus()
+  const fim = el.value.length
+  el.setSelectionRange(fim, fim)
+}
+
 const formatarHora = (data) =>
   data ? new Date(data).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''
 
@@ -119,7 +146,8 @@ function PainelEmbalagens({ embalagens, carregando, onAtualizar }) {
 function Automacao() {
   const [sessaoId, setSessaoId] = useState(obterSessao)
   const [mensagens, setMensagens] = useState([])
-  const [texto, setTexto] = useState('')
+  // rascunho salvo: trocar de pagina e voltar nao apaga o que foi digitado
+  const [texto, setTexto] = useState(lerRascunho)
   const [enviando, setEnviando] = useState(false)
 
   // incrementado para o painel de comandos se atualizar na hora
@@ -164,12 +192,22 @@ function Automacao() {
     fimRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
   }, [mensagens, enviando])
 
+  // campo ja pronto para digitar ao abrir a pagina e depois de cada resposta
+  useEffect(() => {
+    if (!enviando) focarCampo(inputRef.current)
+  }, [enviando, sessaoId])
+
+  // guarda o rascunho a cada tecla
+  useEffect(() => {
+    salvarRascunho(texto)
+  }, [texto])
+
   const enviar = async (conteudo) => {
     const msg = (conteudo ?? texto).trim()
     if (!msg || enviando) return
 
     setMensagens((atual) => [...atual, { id: `tmp-${Date.now()}`, papel: 'USUARIO', conteudo: msg }])
-    setTexto('')
+    if (conteudo === undefined) setTexto('') // botao de exemplo nao apaga o rascunho
     setEnviando(true)
     // o backend ja criou o comando em PROCESSANDO; puxa o painel logo
     setTimeout(avisarPainel, 400)
@@ -200,7 +238,6 @@ function Automacao() {
     } finally {
       setEnviando(false)
       avisarPainel()
-      inputRef.current?.focus()
     }
   }
 
@@ -312,7 +349,7 @@ function Automacao() {
             onKeyDown={aoTeclar}
             maxLength={2000}
             rows={2}
-            disabled={enviando}
+            autoFocus
           />
           <button type="submit" className="ep-btn ep-btn-primary chat-btn-enviar" disabled={enviando || !texto.trim()}>
             <FaPaperPlane />

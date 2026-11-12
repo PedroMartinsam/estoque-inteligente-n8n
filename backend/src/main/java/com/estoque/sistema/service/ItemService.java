@@ -145,18 +145,20 @@ public class ItemService {
         return itemRepository.save(item);
     }
 
-    /** Exclusao logica por id. */
+    /** Exclusao logica por id. So permitida com o estoque zerado. */
     @Transactional
     public Item inativar(Long id) {
         Item item = buscarAtivoOuFalhar(id);
+        exigirEstoqueZerado(item);
         item.setAtivo(false);
         return itemRepository.save(item);
     }
 
-    /** Exclusao logica por nome (usada pelo agente do n8n). */
+    /** Exclusao logica por nome (usada pelo agente do n8n). So permitida com o estoque zerado. */
     @Transactional
     public Item inativarPorNome(String nome) {
         Item item = buscarAtivoPorNomeOuFalhar(nome);
+        exigirEstoqueZerado(item);
         item.setAtivo(false);
         return itemRepository.save(item);
     }
@@ -195,6 +197,15 @@ public class ItemService {
         item.setCategoria(dto.getCategoria());
         item.setUnidade(dto.getUnidade());
         item.setQuantidadeMinima(dto.getQuantidadeMinima());
+    }
+
+    /** Regra de negocio: produto com saldo em estoque nao pode ser inativado. */
+    private void exigirEstoqueZerado(Item item) {
+        int saldo = item.getQuantidade() == null ? 0 : item.getQuantidade();
+        if (saldo > 0) {
+            throw new IllegalStateException("Nao e possivel inativar '" + item.getNome() + "': ainda ha " + saldo
+                    + " unidade(s) em estoque. Zere o estoque antes (registre a saida ou ajuste o saldo para 0).");
+        }
     }
 
     private void validarPositivo(Integer quantidade) {

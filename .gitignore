@@ -1,0 +1,23 @@
+
+# Backend Java / Spring Boot
+backend/target/
+backend/.idea/
+backend/*.iml
+
+# Frontend React / Vite
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
+# Arquivos de ambiente
+.env
+.env.*
+!.env.example
+
+# IDEs
+.idea/
+.vscode/
+
+# Sistema operacional
+.DS_Store
+Thumbs.db

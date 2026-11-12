@@ -167,7 +167,7 @@ public class ItemController {
     }
 
     @PatchMapping("/inativar-por-nome")
-    @Operation(summary = "Inativar (exclusao logica) por nome")
+    @Operation(summary = "Inativar (exclusao logica) por nome - so com estoque zerado")
     public ResponseEntity<Map<String, Object>> inativarPorNome(@RequestParam String nome) {
         return executarPorNome("inativar", nome, "-",
                 "Produto '" + nome.trim() + "' inativado",
@@ -204,9 +204,13 @@ public class ItemController {
     // ================================================================ EXCLUSAO LOGICA
 
     @PatchMapping("/{id}/inativar")
-    @Operation(summary = "Inativar item por ID")
-    public ResponseEntity<Item> inativar(@PathVariable Long id) {
-        return ResponseEntity.ok(itemService.inativar(id));
+    @Operation(summary = "Inativar item por ID (so com estoque zerado; 409 se ainda houver saldo)")
+    public ResponseEntity<?> inativar(@PathVariable Long id) {
+        try {
+            return ResponseEntity.ok(itemService.inativar(id));
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("erro", e.getMessage()));
+        }
     }
 
     @PatchMapping("/{id}/reativar")
@@ -216,9 +220,13 @@ public class ItemController {
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "Excluir item (exclusao logica: apenas inativa)")
-    public ResponseEntity<Void> deletar(@PathVariable Long id) {
-        itemService.deletar(id);
-        return ResponseEntity.noContent().build();
+    @Operation(summary = "Excluir item (exclusao logica, so com estoque zerado; 409 se ainda houver saldo)")
+    public ResponseEntity<?> deletar(@PathVariable Long id) {
+        try {
+            itemService.deletar(id);
+            return ResponseEntity.noContent().build();
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("erro", e.getMessage()));
+        }
     }
 }
